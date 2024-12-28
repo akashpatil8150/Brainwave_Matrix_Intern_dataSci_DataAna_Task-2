@@ -1,0 +1,111 @@
+---code---
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import nltk
+nltk.download('vader_lexicon')
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+df=pd.read_csv("instagram_data.csv")
+df
+
+df.head()
+
+df.tail()
+
+df.info()
+
+df.isnull().sum()     
+
+df['caption'] = df['caption'].str.replace('[^\w\s]', '')  # Remove special chars
+df['caption'] = df['caption'].str.lower()         # Convert to lowercase
+
+df['location'] = df['location'].fillna('Unknown')  # Non-numeric column
+df['username'] = df['username'].fillna('NoUsername')  # Non-numeric column
+df['followers'] = df['followers'].fillna(df['followers'].mean())  # Numeric column
+df['following'] = df['following'].fillna(df['following'].mean())  # Numeric column
+df['caption'] = df['caption'].astype(str)
+
+print(df.isnull().sum())
+
+sid = SentimentIntensityAnalyzer()
+df['sentiment_score'] = df['caption'].apply(lambda x: sid.polarity_scores(x)['compound'])
+
+df['sentiment'] = pd.cut(df['sentiment_score'], bins=[-1, -0.01, 0.01, 1], labels=['Negative', 'Neutral', 'Positive'])
+
+df['created_at'] = pd.to_datetime(df['created_at'], unit='s')
+df['date'] = df['created_at'].dt.date
+sentiment_trends = df.groupby('date')['sentiment_score'].mean()
+plt.plot(sentiment_trends)
+plt.title('Sentiment Trends Over Time')
+plt.xlabel('Date')
+plt.ylabel('Average Sentiment Score')
+plt.show()
+
+df['sentiment'].value_counts().plot(kind='pie', autopct='%1.1f%%', startangle=140)
+plt.title('Sentiment Distribution')
+plt.show()
+
+plt.hist(df['sentiment_score'], bins=20, color='skyblue', edgecolor='black')
+plt.title('Sentiment Score Distribution')
+plt.xlabel('Sentiment Score')
+plt.ylabel('Frequency')
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+plt.show()
+
+import seaborn as sns
+
+sns.boxplot(x='sentiment', y='sentiment_score', data=df, palette='Set2')
+plt.title('Sentiment Score by Sentiment Category')
+plt.xlabel('Sentiment')
+plt.ylabel('Sentiment Score')
+plt.show()
+
+from wordcloud import WordCloud
+
+for sentiment in ['Positive', 'Neutral', 'Negative']:
+    text = ' '.join(df[df['sentiment'] == sentiment]['caption'])
+    wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
+    
+    plt.figure(figsize=(10, 5))
+    plt.imshow(wordcloud, interpolation='bilinear')
+    plt.title(f'Word Cloud for {sentiment} Captions')
+    plt.axis('off')
+    plt.show()
+
+df['sentiment'].value_counts().plot(kind='bar', color=['green', 'blue', 'red'], figsize=(8, 6))
+plt.title('Count of Posts by Sentiment')
+plt.xlabel('Sentiment')
+plt.ylabel('Number of Posts')
+plt.xticks(rotation=0)
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+plt.show()
+
+numerical_cols = ['likes', 'comments', 'followers', 'following', 'sentiment_score']
+correlation_matrix = df[numerical_cols].corr()
+
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f")
+plt.title('Correlation Between Features')
+plt.show()
+
+
+sns.boxplot(x='sentiment', y='likes', data=df, palette='muted')
+plt.title('Likes Distribution by Sentiment')
+plt.xlabel('Sentiment')
+plt.ylabel('Likes')
+plt.show()
+
+sns.boxplot(x='sentiment', y='comments', data=df, palette='muted')
+plt.title('Comments Distribution by Sentiment')
+plt.xlabel('Sentiment')
+plt.ylabel('Comments')
+plt.show()
+
+
+
+
+
+
+
+
+
+
